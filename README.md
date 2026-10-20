@@ -15,13 +15,16 @@ Convierte automáticamente todas las imágenes de una carpeta al formato **WebP*
 - Conserva la calidad de imagen configurable.
 - Crea automáticamente la carpeta de salida.
 - Compatible con Windows, Linux y macOS.
+- Se puede ejecutar con Docker, sin instalar Python ni dependencias en el host.
 
 ## Requisitos
 
 - Python 3.8 o superior
 - Pillow
 
-## Instalación
+## Instalación (uso local)
+
+Omite esta sección si vas a usar Docker.
 
 Clona el repositorio:
 
@@ -49,12 +52,13 @@ image-to-webp/
 │
 ├── images/            # Imágenes originales
 ├── webp/              # Imágenes convertidas
-├── convert.py         # Script principal
+├── main.py            # Script principal
+├── Dockerfile         # Imagen con Python y Pillow
 ├── requirements.txt
 └── README.md
 ```
 
-## Uso
+## Uso local
 
 Coloca las imágenes dentro de la carpeta `images`.
 
@@ -69,6 +73,46 @@ Las imágenes convertidas aparecerán en la carpeta:
 ```
 webp/
 ```
+
+## Uso con Docker (sin instalar dependencias)
+
+El `Dockerfile` construye una imagen local con Python y Pillow ya instalados. En el host solo necesitas Docker. La imagen se construye una vez y permanece en tu equipo hasta que la elimines; cada ejecución usa un contenedor que se borra al terminar (`--rm`).
+
+**Requisito previo:** la carpeta `images/` debe existir y contener las imágenes **antes** de lanzar el contenedor. El repositorio no la crea (está en `.gitignore`); si no existe, no se convertirá nada.
+
+```bash
+mkdir -p images   # si aún no existe, y copia aquí tus imágenes
+```
+
+Desde la raíz del repositorio:
+
+**1. Construir la imagen** (una sola vez, o si cambia `requirements.txt`):
+
+```bash
+docker build -t images2webp .
+```
+
+**2. Ejecutar la conversión:**
+
+Linux / macOS
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD":/app images2webp
+```
+
+Windows (PowerShell)
+
+```powershell
+docker run --rm -v "${PWD}:/app" images2webp
+```
+
+Las imágenes convertidas aparecerán en `webp/`, replicando la estructura de subcarpetas de `images/`.
+
+Notas:
+
+- `-v "$PWD":/app` monta el repositorio sobre el código de la imagen: lee `images/`, escribe `webp/` en tu carpeta y usa tu `main.py` actual. Por eso cambiar `quality`, `method` o `lossless` no requiere reconstruir la imagen.
+- `--user "$(id -u):$(id -g)"` hace que los archivos generados pertenezcan a tu usuario y no a `root` (en Linux).
+- Para borrar la imagen cuando ya no la necesites: `docker rmi images2webp`.
 
 ## Configuración
 
@@ -141,13 +185,9 @@ webp/
 
 ## Dependencias
 
-- Pillow
+- Pillow (fijada en `requirements.txt`)
 
-Instalación:
-
-```bash
-pip install Pillow
-```
+Si usas Docker no necesitas instalarla en el host.
 
 ## Autor
 
